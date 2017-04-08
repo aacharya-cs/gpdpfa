@@ -7,7 +7,7 @@ clear all;
 clc;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-if 0
+if 1
     %Xorg     = round(5*rand(100,10));
     Xorg     = [4,5,4,1,0,4,3,4,0,6,3,3,4,0,2,6,3,3,5,4,5,3,1,4,4,1,5,5,3,4,2,5,2,2,3,4,2,1,3,2,2,1,1,1,1,3,0,0,1,0,1,1,0,0,3,1,0,3,2,2,0,1,1,1,0,1,0,1,0,0,0,2,1,0,0,0,1,1,0,2,3,3,1,1,2,1,1,1,1,2,4,2,0,0,0,1,4,0,0,0,1,0,0,0,0,0,1,0,0,1,0,1];
 end
@@ -19,7 +19,7 @@ if 0
     length(find(temp>0))
     max(max(Xorg))
 end
-if 1
+if 0
     Xorg = load('GhoshPapers.mat');
     Xorg = full(Xorg.B);
     Xorg(find(Xorg<=2)) = 0;
@@ -29,10 +29,10 @@ if 1
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% model parameters
-K = 100; c = 1; azero = 1; bzero = 1.0; ezero=1.0; fzero=1.0; gammazero = 10.0; hzero = 1.0; etazero = 0.01;
+K = 1; c = 1; azero = 1; bzero = 1.0; ezero=1.0; fzero=1.0; gammazero = 10.0; hzero = 1.0; etazero = 0.01;
 %% set K=V=1 for GPAR
 %% Gibbs sampling specific parameters
-burnin  = 4000; collection = 4000;
+burnin  = 1000; collection = 1000;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 futureT  = 0;   %% number of time-stamps over which every observation is held-out
 p        = 0.1; %% fraction of observation held-out from all other time-stamps
@@ -134,36 +134,35 @@ for iter=1:burnin + collection
             nprime(:,tprime) = poissrnd((repmat(lambdak,V,1).*Phi)*(thetaktprime(tprime,:))');
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         end
-    end        
-end
-
-if(K==1 && V==1) %% for the GPAR model and its baseline
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% for proposed model
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    temp     = [Theta' thetaktprime']';
-    currrate = [temp*diag(lambdak)]'./[c_t ctprime];
-    Samples(:,iter-burnin) = currrate;
-    temp = (mean(Samples,2))';
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    if 1 %(mod(iter,50)==0)
-        %figure(1);
-        %plot(indexset,temp,'r.-',indexset,tempbase,'k.-',indexset, Xtemp, 'b.-', indexset, currrate, 'g.-', 'linewidth', 2);
-        plot(indexset,temp,'r.-',indexset,tempbase,'k.-',indexset, Xorg, 'b.-', 'linewidth', 5);
-        legend('estimated rate','estimated rate (baseline)','original count'); grid on;
-        axis([1 T 0 10]);
-        xlabel('year index');
-        ylabel('count');
-        set(gca,'FontSize',40,'fontWeight','bold'),
-        set(findall(gcf,'type','text'),'FontSize',40,'fontWeight','bold'),
-        %                 figure(2);
-        %                 %plot(indexset,tempbase,'r.-',indexset, Xtemp, 'b.-', indexset, currratebase, 'g.-', 'linewidth', 2);
-        %                 plot(indexset,tempbase,'r.-',indexset, Xtemp, 'b.-', 'linewidth', 2);
-        %                 legend('estimated rate','original count','current sample'); grid on;
-        %                 axis([1 T 0 10]);
-        %                 xlabel('year index');
-        %                 ylabel('count');
-        drawnow;
+    end
+    if(K==1 && V==1 && iter>burnin) %% for the GPAR model and its baseline
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %% for proposed model
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        temp     = [Theta' thetaktprime']';
+        currrate = [temp*diag(lambdak)]'./[c_t ctprime];
+        Samples(:,iter-burnin) = currrate;
+        temp = (mean(Samples,2))';
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        if (mod(iter,10)==0)
+            figure(1);
+            plot(indexset,temp,'r.-',indexset,tempbase,'k.-',indexset, Xtemp, 'b.-', indexset, currrate, 'g.-', 'linewidth', 2);
+            plot(indexset,temp,'r.-',indexset,tempbase,'k.-',indexset, Xorg, 'b.-', 'linewidth', 5);
+            legend('estimated rate','estimated rate (baseline)','original count'); grid on;
+            axis([1 T 0 10]);
+            xlabel('year index');
+            ylabel('count');
+            set(gca,'FontSize',40,'fontWeight','bold'),
+            set(findall(gcf,'type','text'),'FontSize',40,'fontWeight','bold'),
+            %                 figure(2);
+            %                 %plot(indexset,tempbase,'r.-',indexset, Xtemp, 'b.-', indexset, currratebase, 'g.-', 'linewidth', 2);
+            %                 plot(indexset,tempbase,'r.-',indexset, Xtemp, 'b.-', 'linewidth', 2);
+            %                 legend('estimated rate','original count','current sample'); grid on;
+            %                 axis([1 T 0 10]);
+            %                 xlabel('year index');
+            %                 ylabel('count');
+            drawnow;
+        end
     end
 end
 
@@ -184,22 +183,6 @@ else
     mean(recall)
 end
 
-%% plot for the DBLP data
-% subplot();
-% for t=1:T
-%     temp = lambdak*Theta(t,:);
-%     subplot(T,1,(t-1)*3+3); plot(temp/sum(temp),'r.-');title('relative strength of factors');
-%     xlabel('topic index');
-%     ylabel('topic strength');
-%     set(gca,'FontSize',10,'fontWeight','bold'),
-%     set(findall(gcf,'type','text'),'FontSize',10,'fontWeight','bold'),
-%     temp = lambdakbase*Thetabase(t,:);
-%     subplot(T,2,(t-1)*3+3); plot(temp/sum(temp),'b.-');title('relative strength of factors');
-%     xlabel('topic index');
-%     ylabel('topic strength');
-%     set(gca,'FontSize',10,'fontWeight','bold'),
-%     set(findall(gcf,'type','text'),'FontSize',10,'fontWeight','bold'),
-% end
 
 end
 
